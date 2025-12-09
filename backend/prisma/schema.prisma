@@ -1,0 +1,260 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===== USER MODELS =====
+
+/// User account - represents tenant, landlord, or admin
+model User {
+  id                String        @id @default(cuid())
+  email             String        @unique
+  password          String
+  firstName         String
+  lastName          String
+  phone             String        @unique
+  profileImage      String?
+  state             String
+  role              String        @default("TENANT")
+  isVerified        Boolean       @default(false)
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+
+  // Relations
+  tenantBookings    Booking[]     @relation("tenantBookings")
+  reviews           Review[]      @relation("reviews")
+  sentMessages      Message[]     @relation("sentMessages")
+  receivedMessages  Message[]     @relation("receivedMessages")
+  payments          Payment[]
+  properties        Property[]    @relation("landlord")
+  tenantProfile     TenantProfile?
+  landlordProfile   LandlordProfile?
+
+  @@index([email])
+}
+
+/// Tenant additional profile information
+model TenantProfile {
+  id                String        @id @default(cuid())
+  userId            String        @unique
+  bio               String?
+  occupationStatus  String?
+  monthlyIncome     Int?
+  verifiedBy        String?
+  verificationDate  DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Landlord additional profile information
+model LandlordProfile {
+  id                String        @id @default(cuid())
+  userId            String        @unique
+  businessName      String?
+  registrationNumber String?
+  bankName          String?
+  bankAccount       String?
+  averageRating     Float         @default(0)
+  totalListings     Int           @default(0)
+  totalBookings     Int           @default(0)
+  totalRevenue      Float         @default(0)
+  verifiedBy        String?
+  verificationDate  DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ===== PROPERTY MODELS =====
+
+/// Property/Apartment listing (owns multiple units)
+model Property {
+  id                String        @id @default(cuid())
+  landlordId        String
+  name              String
+  description       String
+  address           String
+  city              String
+  state             String
+  latitude          Float?
+  longitude         Float?
+  imageUrls         String        @default("[]")
+  amenities         String        @default("[]")
+  status            String        @default("ACTIVE")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+
+  // Relations
+  landlord          User          @relation("landlord", fields: [landlordId], references: [id], onDelete: Cascade)
+  units             Unit[]
+  bookings          Booking[]
+
+  @@index([landlordId])
+  @@index([state])
+}
+
+/// Unit within a property (apartment/room)
+model Unit {
+  id                String        @id @default(cuid())
+  propertyId        String
+  unitNumber        String
+  bedroomCount      Int
+  bathroomCount     Int
+  size              Int           // in square meters
+  pricePerMonth     Int           // in NGN
+  imageUrls         String        @default("[]")
+  amenities         String        @default("[]")
+  isAvailable       Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  property          Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  bookings          Booking[]
+  reviews           Review[]
+
+  @@index([propertyId])
+  @@index([pricePerMonth])
+}
+
+// ===== BOOKING MODELS =====
+
+/// Booking request from tenant
+model Booking {
+  id                String        @id @default(cuid())
+  tenantId          String
+  propertyId        String
+  unitId            String
+  checkInDate       DateTime
+  checkOutDate      DateTime
+  status            String        @default("PENDING")
+  notes             String?
+  cancellationReason String?
+  cancelledAt       DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  tenant            User          @relation("tenantBookings", fields: [tenantId], references: [id], onDelete: Cascade)
+  property          Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unit              Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  payment           Payment?
+  review            Review?
+
+  @@index([tenantId])
+  @@index([propertyId])
+  @@index([status])
+}
+
+// ===== REVIEW MODELS =====
+
+/// Review of a unit/property by tenant
+model Review {
+  id                String        @id @default(cuid())
+  bookingId         String        @unique
+  unitId            String
+  tenantId          String
+  rating            Int           // 1-5
+  title             String
+  comment           String
+  cleanliness       Int?          // 1-5
+  accuracy          Int?          // 1-5
+  communication     Int?          // 1-5
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  unit              Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant            User          @relation("reviews", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([unitId])
+  @@index([tenantId])
+  @@index([rating])
+}
+
+// ===== MESSAGE MODELS =====
+
+/// Direct message between users
+model Message {
+  id                String        @id @default(cuid())
+  senderId          String
+  receiverId        String
+  content           String
+  isRead            Boolean       @default(false)
+  readAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  sender            User          @relation("sentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver          User          @relation("receivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([isRead])
+}
+
+// ===== PAYMENT MODELS =====
+
+/// Payment transaction
+model Payment {
+  id                String        @id @default(cuid())
+  bookingId         String        @unique
+  userId            String
+  amount            Float         // in NGN
+  currency          String        @default("NGN")
+  status            String        @default("PENDING")
+  paymentMethod     String        // "paystack", "flutterwave"
+  reference         String        @unique
+  transactionId     String?
+  meta              String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([reference])
+}
+
+// ===== ADMIN LOG MODELS =====
+
+/// Admin action logs for auditing
+model AdminLog {
+  id                String        @id @default(cuid())
+  action            String
+  resource          String        // "user", "property", "booking", etc.
+  resourceId        String
+  description       String
+  changedFields     String?
+  ipAddress         String?
+  userAgent         String?
+  createdAt         DateTime      @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+}

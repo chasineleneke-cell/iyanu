@@ -1,0 +1,283 @@
+RentNG DEPLOYMENT CHECKLIST
+============================
+
+BEFORE YOU START
+[ ] Do you have a GitHub account? (github.com)
+[ ] Do you have a Vercel account? (vercel.com)
+[ ] Do you have a Railway account? (railway.app)
+[ ] Do you have a Neon account? (console.neon.tech)
+
+If not, create these accounts first (2 minutes each).
+
+============================
+STEP 1: PREPARE YOUR CODE (2 minutes)
+============================
+
+[ ] Push code to GitHub
+    - Open source control in VS Code
+    - Add all changes
+    - Commit message: "Production deployment"
+    - Push to main
+    
+    OR copy your project to GitHub via web interface
+
+After this step:
+- Your code is on GitHub
+- Vercel and Railway can access it
+
+============================
+STEP 2: DATABASE SETUP - NEON (5 minutes)
+============================
+
+[ ] Go to https://console.neon.tech
+[ ] Create new project
+    - Name: rentnng-prod
+    - Version: PostgreSQL 15
+    - Click Create
+[ ] Wait for project to initialize
+[ ] Go to Connection strings
+[ ] Select Prisma format
+[ ] Copy connection string
+[ ] PASTE CONNECTION STRING HERE:
+    _________________________________________________
+    _________________________________________________
+
+Save this string - you'll need it in next step!
+
+After this step:
+- Database is created
+- Connection string is ready
+
+============================
+STEP 3: DEPLOY BACKEND - RAILWAY (12 minutes)
+============================
+
+[ ] Go to https://railway.app
+[ ] Click "New Project"
+[ ] Select "Deploy from GitHub repo"
+[ ] Authorize Railway to access GitHub
+[ ] Select your RentNG repository
+[ ] Click Deploy
+[ ] WAIT FOR BUILD TO COMPLETE (2-3 minutes)
+    Watch the logs until it says "Deployment successful"
+
+[ ] Go to Variables tab
+[ ] Add variable: DATABASE_URL
+    Paste your Neon connection string from Step 2
+
+[ ] Add variable: JWT_ACCESS_SECRET
+    Value: MySecretKey123456789
+
+[ ] Add variable: JWT_REFRESH_SECRET
+    Value: AnotherSecretKey987654321
+
+[ ] Add variable: NODE_ENV
+    Value: production
+
+[ ] Go to Deployments
+[ ] Click active deployment
+[ ] Copy the URL (format: https://xxx.railway.app)
+[ ] PASTE RAILWAY BACKEND URL HERE:
+    _________________________________________________
+
+[ ] Test backend health:
+    Visit: (your-url)/health in browser
+    Should see: {"success": true, ...}
+
+After this step:
+- Backend is running on Railway
+- Database is connected
+- API is accessible
+
+============================
+STEP 4: DEPLOY FRONTEND - VERCEL (12 minutes)
+============================
+
+[ ] Go to https://vercel.com
+[ ] Click "Add New" > "Project"
+[ ] Find your RentNG repository
+[ ] Click "Import"
+[ ] Leave settings default (Next.js auto-detected)
+[ ] Click "Deploy"
+[ ] WAIT FOR BUILD TO COMPLETE (2-3 minutes)
+
+[ ] While deploying, go to Settings
+[ ] Environment Variables section
+[ ] Add new variable:
+    Name: NEXT_PUBLIC_API_URL
+    Value: (your-railway-url)/api
+
+    Example: https://rentnng-backend.railway.app/api
+
+[ ] Save
+[ ] Trigger redeploy or wait for auto-deploy
+[ ] After deployment, copy the Vercel URL
+[ ] PASTE VERCEL FRONTEND URL HERE:
+    _________________________________________________
+
+[ ] Visit your Vercel URL in browser
+[ ] Should see RentNG homepage
+[ ] Check browser console for errors (should be none)
+
+After this step:
+- Frontend is running on Vercel
+- Connected to backend
+- All pages accessible
+
+============================
+STEP 5: CONNECT FRONTEND & BACKEND (2 minutes)
+============================
+
+[ ] Go back to Railway
+[ ] Go to Variables
+[ ] Add new variable:
+    Name: FRONTEND_URL
+    Value: (your-vercel-url)
+
+    Example: https://rentnng-prod.vercel.app
+
+[ ] Save
+[ ] Railway auto-redeploys (1-2 minutes)
+[ ] Check Deployments to confirm
+
+After this step:
+- CORS is configured
+- Frontend and backend can communicate
+- Ready for testing
+
+============================
+STEP 6: FINAL TESTING (5 minutes)
+============================
+
+[ ] Test 1: Homepage loads
+    - Visit your Vercel URL
+    - Should see landing page
+
+[ ] Test 2: Backend responds
+    - Visit (backend-url)/health
+    - Should see JSON response
+
+[ ] Test 3: Register new user
+    - Click Register
+    - Fill form:
+      Email: test@example.com
+      Password: Test123!Pass
+      Name: Test User
+      Phone: +2348012345678
+      State: Lagos
+    - Click Register
+    - Should see success
+
+[ ] Test 4: Login
+    - Go to Login
+    - Use credentials from Test 3
+    - Should see dashboard
+
+[ ] Test 5: Check API
+    - Open browser DevTools (F12)
+    - Go to Network tab
+    - Make a request (e.g., click Register)
+    - Check that requests go to (backend-url)
+    - Should see 200 responses
+
+After this step:
+- All systems working
+- App is LIVE in production
+
+============================
+STEP 7: OPTIONAL - CUSTOM DOMAIN (10 minutes)
+============================
+
+[ ] Go to Vercel > Settings > Domains
+[ ] Add your custom domain (e.g., rentnng.ng)
+[ ] Follow DNS instructions
+[ ] Wait for DNS to propagate
+
+[ ] Go to Railway > Settings > Domains
+[ ] Add custom domain for backend (e.g., api.rentnng.ng)
+[ ] Follow DNS instructions
+[ ] Wait for DNS to propagate
+
+After this step:
+- Custom domains configured
+- More professional URLs
+
+============================
+COMPLETE! PRODUCTION LIVE
+============================
+
+Your production URLs are:
+
+FRONTEND: ___________________________________
+BACKEND: ____________________________________
+DATABASE: Neon PostgreSQL
+
+Next steps:
+[ ] Share URLs with team
+[ ] Monitor logs regularly
+[ ] Setup error tracking (Sentry)
+[ ] Setup analytics (Vercel provides free)
+[ ] Backup database regularly (Neon auto-backups)
+
+============================
+EMERGENCY ROLLBACK
+============================
+
+If something goes wrong:
+
+Railway rollback:
+1. Go to Deployments
+2. Find previous working version
+3. Click menu (...)
+4. Click Rollback
+
+Vercel rollback:
+1. Go to Deployments
+2. Find previous working version
+3. Click menu (...)
+4. Click Promote to Production
+
+Database issue:
+- Neon keeps backups automatically
+- Can restore from Neon console
+
+============================
+SUPPORT CONTACTS
+============================
+
+Railway: https://railway.app/docs
+Vercel: https://vercel.com/docs  
+Neon: https://neon.tech/docs
+Prisma: https://www.prisma.io/docs
+
+============================
+TIME TRACKING
+============================
+
+Start time: __________
+Step 1 (prep): ____ min
+Step 2 (neon): ____ min
+Step 3 (railway): ____ min
+Step 4 (vercel): ____ min
+Step 5 (connect): ____ min
+Step 6 (test): ____ min
+TOTAL: ____ minutes
+
+============================
+SIGN OFF
+============================
+
+By checking this box, you confirm RentNG is live:
+
+[ ] RentNG is deployed to production
+[ ] Frontend is accessible
+[ ] Backend is responding
+[ ] Database is connected
+[ ] All tests pass
+[ ] Ready for users
+
+Deployed by: _____________________
+Date: _____________________
+Time: _____________________
+
+GO LIVE! 🚀
